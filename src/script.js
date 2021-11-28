@@ -26,7 +26,7 @@ parameters.size = 0.005;
 parameters.radius = 5;
 parameters.branches = 3;
 parameters.spin = 1;
-parameters.randomness = 0.5;
+parameters.randomness = 0.2;
 parameters.randomnessPower = 3;
 parameters.insideColor = '#ff6030';
 parameters.outsideColor = '#1b3984';
@@ -50,6 +50,7 @@ const generateGalaxy = () => {
   const positions = new Float32Array(parameters.count * 3);
   const colors = new Float32Array(parameters.count * 3);
   const scales = new Float32Array(parameters.count * 1);
+  const randomness = new Float32Array(parameters.count * 3);
 
   const insideColor = new THREE.Color(parameters.insideColor);
   const outsideColor = new THREE.Color(parameters.outsideColor);
@@ -63,6 +64,11 @@ const generateGalaxy = () => {
     const branchAngle =
       ((i % parameters.branches) / parameters.branches) * Math.PI * 2;
 
+    positions[i3] = Math.cos(branchAngle) * radius;
+    positions[i3 + 1] = 0;
+    positions[i3 + 2] = Math.sin(branchAngle) * radius;
+
+    // Randomness
     const randomX =
       Math.pow(Math.random(), parameters.randomnessPower) *
       (Math.random() < 0.5 ? 1 : -1) *
@@ -79,10 +85,9 @@ const generateGalaxy = () => {
       parameters.randomness *
       radius;
 
-    positions[i3] = Math.cos(branchAngle) * radius + randomX;
-    positions[i3 + 1] = randomY;
-    positions[i3 + 2] = Math.sin(branchAngle) * radius + randomZ;
-
+    randomness[i3 + 0] = randomX;
+    randomness[i3 + 1] = randomY;
+    randomness[i3 + 2] = randomZ;
     // Color
     const mixedColor = insideColor.clone();
     mixedColor.lerp(outsideColor, radius / parameters.radius);
@@ -98,6 +103,10 @@ const generateGalaxy = () => {
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   geometry.setAttribute('aScale', new THREE.BufferAttribute(scales, 1));
+  geometry.setAttribute(
+    'aRandomness',
+    new THREE.BufferAttribute(randomness, 3)
+  );
 
   /**
    * Material
@@ -110,6 +119,7 @@ const generateGalaxy = () => {
     fragmentShader: galaxyFragmentShader,
     uniforms: {
       uSize: { value: 30 * renderer.getPixelRatio() },
+      uTime: { value: 0 },
     },
   });
 
@@ -217,6 +227,9 @@ const clock = new THREE.Clock();
 
 const tick = () => {
   const elapsedTime = clock.getElapsedTime();
+
+  // Update uTime
+  material.uniforms.uTime.value = elapsedTime;
 
   // Update controls
   controls.update();
